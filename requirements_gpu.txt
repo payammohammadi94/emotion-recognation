@@ -1,0 +1,52 @@
+# GPU-optimized requirements for Emotion Recognition System
+# بسته‌های اصلی برای پردازش GPU
+
+# PyTorch with CUDA support
+--index-url https://download.pytorch.org/whl/cu121
+torch==2.6.0+cu121
+torchvision==0.21.0+cu121
+torchaudio==2.6.0+cu121
+
+# ONNX Runtime with GPU support
+onnxruntime-gpu==1.21.0
+
+# Core dependencies (same as before)
+opencv-python==4.11.0.86
+numpy==2.2.2
+scipy>=1.15.1
+scikit-learn==1.6.1
+librosa==0.10.2.post1
+sounddevice==0.5.1
+soundfile==0.13.1
+matplotlib==3.10.0
+pandas==2.2.3
+imutils==0.5.4
+
+# GUI and database
+PyQt6==6.7.1
+PyQt6-Charts==6.7.0
+
+# EEG processing
+mne>=1.0.0
+joblib==1.4.2
+
+# Audio processing
+funasr==1.2.4
+
+# Optional GPU acceleration (uncomment if you want maximum GPU performance)
+# cupy-cuda12x>=12.0.0  # For CUDA 12.x
+# numba>=0.60.0
+
+# PDF generation
+fpdf==1.7.2
+python-docx==1.1.2
+
+# FastAPI for API
+fastapi==0.115.12
+uvicorn==0.34.1
+
+# Other utilities
+tqdm==4.67.1
+requests==2.32.3
+Pillow==11.1.0
+

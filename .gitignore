@@ -1,0 +1,93 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Model Files (حجم زیاد دارند)
+*.onnx
+*.pth
+*.pt
+*.h5
+*.pkl
+*.joblib
+*.pb
+*.tflite
+*.ckpt
+*.safetensors
+*.bin
+*.weights
+
+# Model Directories
+FaceRecognation/SAVED_MODELS/
+SpeechEmotionRecognation/emotion2vec_plus_large/model.pt
+eegEmotionRecognation/*.pkl
+
+# Database Files
+*.db
+dataBase/
+
+# PDF Reports (گزارش‌های تولید شده)
+pdf/
+
+# Audio Files (فایل‌های صوتی ضبط شده)
+*.wav
+*.mp3
+*.flac
+*.ogg
+SpeechEmotionRecognation/emotion2vec_plus_large/recorded_audio.wav
+
+# Snapshot/Reference Images
+FaceRecognation/reference_faces/
+*.jpg
+*.jpeg
+*.png
+!images/*.png
+!images/*.jpg
+!images/*.jpeg
+!images/*.webp
+!images/*.avif
+
+# Temporary Files
+*.tmp
+*.temp
+*.log
+*.cache
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Settings (اگر حاوی اطلاعات حساس است)
+# settings.json
+
