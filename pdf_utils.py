@@ -209,6 +209,244 @@ class EmotionReport:
         print(f"[✓] Report saved as {report_filename}")
         return report_filename
     
+    def generate_report_with_snapshots(self, faces_data):
+        """تولید گزارش PDF برای تمام صورت‌ها با snapshot ها"""
+        if not faces_data:
+            print("[-] No faces data to generate report.")
+            return None
+        
+        pdf = FPDF()
+        
+        for face_info in faces_data:
+            face_id = face_info['face_id']
+            data = face_info['data']
+            snapshot_path = face_info['snapshot_path']
+            
+            if not data:
+                continue
+            
+            # آمار برای این صورت
+            all_emotions = [item['emotion'] for item in data]
+            emotion_counter = Counter(all_emotions)
+            total = len(all_emotions)
+            average_prob = sum(item['prob'] for item in data) / total if total > 0 else 0
+            
+            labels = list(emotion_counter.keys())
+            sizes = list(emotion_counter.values())
+            
+            # Pie chart
+            plt.figure(figsize=(8, 8))
+            colors = plt.cm.Set3(range(len(labels)))
+            wedges, texts, autotexts = plt.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=140, 
+                                              colors=colors, textprops={'fontsize': 10, 'fontweight': 'bold'})
+            for autotext in autotexts:
+                autotext.set_color('black')
+                autotext.set_fontsize(9)
+                autotext.set_fontweight('bold')
+            plt.title(f"Face ID {face_id} - Emotion Distribution", fontsize=14, fontweight='bold', pad=20)
+            pie_chart_path = f"emotion_pie_chart_face_{face_id}.png"
+            plt.savefig(pie_chart_path, dpi=150, bbox_inches='tight')
+            plt.close()
+            
+            # Bar chart
+            plt.figure(figsize=(10, 6))
+            colors_bar = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2']
+            bars = plt.bar(range(len(labels)), sizes, color=colors_bar[:len(labels)], edgecolor='black', linewidth=1.5)
+            for i, (bar, size) in enumerate(zip(bars, sizes)):
+                height = bar.get_height()
+                plt.text(bar.get_x() + bar.get_width()/2., height,
+                        f'{size}',
+                        ha='center', va='bottom', fontsize=11, fontweight='bold')
+            plt.xticks(range(len(labels)), labels, rotation=45, ha='right', fontsize=11, fontweight='bold')
+            plt.yticks(fontsize=10)
+            plt.title(f"Face ID {face_id} - Emotion Frequency", fontsize=14, fontweight='bold', pad=20)
+            plt.xlabel("Emotion", fontsize=12, fontweight='bold')
+            plt.ylabel("Count", fontsize=12, fontweight='bold')
+            plt.grid(axis='y', alpha=0.3, linestyle='--')
+            plt.tight_layout()
+            bar_chart_path = f"emotion_bar_chart_face_{face_id}.png"
+            plt.savefig(bar_chart_path, dpi=150, bbox_inches='tight')
+            plt.close()
+            
+            # Add page to PDF
+            pdf.add_page()
+            pdf.set_font("Arial", "B", 16)
+            pdf.cell(0, 10, f"Face ID {face_id} - Emotion Analysis", ln=True, align="C")
+            pdf.ln(10)
+            
+            # Add snapshot if exists
+            if snapshot_path and os.path.exists(snapshot_path):
+                pdf.set_font("Arial", "B", 12)
+                pdf.cell(0, 10, "Face Snapshot:", ln=True)
+                pdf.ln(5)
+                pdf.image(snapshot_path, x=60, w=90, h=90)
+                pdf.ln(10)
+            
+            # Add statistics
+            pdf.set_font("Arial", "", 12)
+            pdf.cell(0, 10, f"Total Samples: {total}", ln=True)
+            pdf.cell(0, 10, f"Average Confidence: {average_prob:.2f}%", ln=True)
+            pdf.cell(0, 10, f"Most Frequent Emotion: {emotion_counter.most_common(1)[0][0] if emotion_counter else 'N/A'}", ln=True)
+            pdf.ln(10)
+            
+            # Add pie chart
+            pdf.set_font("Arial", "B", 14)
+            pdf.cell(0, 10, "Emotion Distribution (Pie Chart)", ln=True)
+            pdf.image(pie_chart_path, x=30, w=150)
+            
+            # Add bar chart on new page
+            pdf.add_page()
+            pdf.set_font("Arial", "B", 14)
+            pdf.cell(0, 10, "Emotion Frequency (Bar Chart)", ln=True)
+            pdf.image(bar_chart_path, x=10, w=190)
+            
+            # Remove temporary chart images
+            os.remove(pie_chart_path)
+            os.remove(bar_chart_path)
+        
+        # Save PDF
+        report_filename = os.path.join(PDF_DIR_face_recognation, f"Emotion_Report_Faces_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf")
+        pdf.output(report_filename)
+        
+        # Delete snapshot files after PDF generation
+        for face_info in faces_data:
+            snapshot_path = face_info.get('snapshot_path')
+            if snapshot_path and os.path.exists(snapshot_path):
+                try:
+                    os.remove(snapshot_path)
+                except Exception as e:
+                    print(f"[-] Error deleting snapshot {snapshot_path}: {e}")
+        
+        print(f"[✓] Report saved as {report_filename}")
+        return report_filename
+    
+    def generate_report_for_single_face(self, face_id, data, snapshot_path=None):
+        """تولید گزارش PDF برای یک صورت خاص"""
+        if not data:
+            print(f"[-] No data to generate report for face ID {face_id}.")
+            return None
+        
+        all_emotions = [item['emotion'] for item in data]
+        emotion_counter = Counter(all_emotions)
+        total = len(all_emotions)
+        average_prob = sum(item['prob'] for item in data) / total if total > 0 else 0
+        
+        labels = list(emotion_counter.keys())
+        sizes = list(emotion_counter.values())
+        
+        # Pie chart
+        plt.figure(figsize=(8, 8))
+        colors = plt.cm.Set3(range(len(labels)))
+        wedges, texts, autotexts = plt.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=140, 
+                                          colors=colors, textprops={'fontsize': 10, 'fontweight': 'bold'})
+        for autotext in autotexts:
+            autotext.set_color('black')
+            autotext.set_fontsize(9)
+            autotext.set_fontweight('bold')
+        plt.title(f"Face ID {face_id} - Emotion Distribution", fontsize=14, fontweight='bold', pad=20)
+        pie_chart_path = f"emotion_pie_chart_face_{face_id}.png"
+        plt.savefig(pie_chart_path, dpi=150, bbox_inches='tight')
+        plt.close()
+        
+        # Bar chart
+        plt.figure(figsize=(10, 6))
+        colors_bar = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2']
+        bars = plt.bar(range(len(labels)), sizes, color=colors_bar[:len(labels)], edgecolor='black', linewidth=1.5)
+        for i, (bar, size) in enumerate(zip(bars, sizes)):
+            height = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{size}',
+                    ha='center', va='bottom', fontsize=11, fontweight='bold')
+        plt.xticks(range(len(labels)), labels, rotation=45, ha='right', fontsize=11, fontweight='bold')
+        plt.yticks(fontsize=10)
+        plt.title(f"Face ID {face_id} - Emotion Frequency", fontsize=14, fontweight='bold', pad=20)
+        plt.xlabel("Emotion", fontsize=12, fontweight='bold')
+        plt.ylabel("Count", fontsize=12, fontweight='bold')
+        plt.grid(axis='y', alpha=0.3, linestyle='--')
+        plt.tight_layout()
+        bar_chart_path = f"emotion_bar_chart_face_{face_id}.png"
+        plt.savefig(bar_chart_path, dpi=150, bbox_inches='tight')
+        plt.close()
+        
+        # Emotion trend chart
+        timestamps = [item['timestamp'] for item in data]
+        emotion_series = {key: [] for key in self.emotion_keys}
+        for item in data:
+            probs = item['probs']
+            for i, key in enumerate(self.emotion_keys):
+                emotion_series[key].append(probs[i] if i < len(probs) else 0)
+        
+        plt.figure(figsize=(12, 6))
+        for key in self.emotion_keys:
+            plt.plot(range(len(timestamps)), emotion_series[key], marker='o', label=key, linewidth=2)
+        plt.xticks(range(len(timestamps)), timestamps, rotation=45, ha='right', fontsize=8)
+        plt.tight_layout()
+        plt.title(f"Face ID {face_id} - Emotion Trend Over Time", fontsize=14, fontweight='bold')
+        plt.xlabel("Timestamp", fontsize=12)
+        plt.ylabel("Probability", fontsize=12)
+        plt.legend(loc='upper right')
+        plt.grid(alpha=0.3)
+        trend_chart_path = f"emotion_trend_chart_face_{face_id}.png"
+        plt.savefig(trend_chart_path, dpi=150, bbox_inches='tight')
+        plt.close()
+        
+        # Create PDF
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", "B", 16)
+        pdf.cell(0, 10, f"Face ID {face_id} - Emotion Analysis Report", ln=True, align="C")
+        pdf.ln(10)
+        
+        # Add snapshot if exists
+        if snapshot_path and os.path.exists(snapshot_path):
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0, 10, "Face Snapshot:", ln=True)
+            pdf.ln(5)
+            pdf.image(snapshot_path, x=60, w=90, h=90)
+            pdf.ln(10)
+        
+        # Add statistics
+        pdf.set_font("Arial", "", 12)
+        pdf.cell(0, 10, f"Total Samples: {total}", ln=True)
+        pdf.cell(0, 10, f"Average Confidence: {average_prob:.2f}%", ln=True)
+        pdf.cell(0, 10, f"Most Frequent Emotion: {emotion_counter.most_common(1)[0][0] if emotion_counter else 'N/A'}", ln=True)
+        pdf.ln(10)
+        
+        # Add pie chart
+        pdf.set_font("Arial", "B", 14)
+        pdf.cell(0, 10, "Emotion Distribution (Pie Chart)", ln=True)
+        pdf.image(pie_chart_path, x=30, w=150)
+        
+        # Add bar chart on new page
+        pdf.add_page()
+        pdf.set_font("Arial", "B", 14)
+        pdf.cell(0, 10, "Emotion Frequency (Bar Chart)", ln=True)
+        pdf.image(bar_chart_path, x=10, w=190)
+        
+        # Add trend chart on new page
+        pdf.add_page()
+        pdf.set_font("Arial", "B", 14)
+        pdf.cell(0, 10, "Emotion Trend Over Time", ln=True)
+        pdf.image(trend_chart_path, x=10, w=190)
+        
+        # Save PDF
+        report_filename = os.path.join(PDF_DIR_face_recognation, f"Emotion_Report_Face_{face_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf")
+        pdf.output(report_filename)
+        
+        # Remove temporary chart images
+        os.remove(pie_chart_path)
+        os.remove(bar_chart_path)
+        os.remove(trend_chart_path)
+        
+        # Delete snapshot file after PDF generation
+        if snapshot_path and os.path.exists(snapshot_path):
+            try:
+                os.remove(snapshot_path)
+            except Exception as e:
+                print(f"[-] Error deleting snapshot {snapshot_path}: {e}")
+        
+        print(f"[✓] Report saved as {report_filename}")
+        return report_filename
 
     def generate_report_fution_recognation(self, data_buffer):
         if not data_buffer:

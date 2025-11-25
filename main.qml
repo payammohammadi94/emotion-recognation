@@ -243,6 +243,17 @@ ApplicationWindow {
             property bool startStop : false
             property double percentageEmotion: 0;
             property string emotionStatus: "Empty";
+            property int detectedFacesCount: 0;
+            
+            // Helper function to ensure percentageEmotion is always valid
+            function setPercentageEmotion(value) {
+                if (typeof value === 'undefined' || isNaN(value) || !isFinite(value)) {
+                    percentageEmotion = 0.0;
+                } else {
+                    percentageEmotion = Math.max(0.0, Math.min(1.0, value));
+                }
+            }
+            
             anchors.fill: parent
             color: "#212121"
             Text {
@@ -480,7 +491,7 @@ ApplicationWindow {
                 }
                 Text {
                     id: percentageNowThree
-                    text: "Percentage: " +  Math.round(percentageEmotion*100) + "%"
+                    text: "Percentage: " + (isNaN(percentageEmotion) ? "0" : Math.round(percentageEmotion*100)) + "%"
                     font.family: "Arial"
                     font.pointSize: 18
                     font.bold:true
@@ -495,7 +506,7 @@ ApplicationWindow {
                 
                 Text {
                     id: genderIdThree
-                    text: "Gender: " + "Male"
+                    text: "Number Face: " + detectedFacesCount
                     font.family: "Arial"
                     font.pointSize: 18
                     font.bold:true
@@ -841,6 +852,49 @@ ApplicationWindow {
             }
             Connections{
                 target: faceEmotionRecognation
+                function onMultipleFacesResult(faces_data) {
+                    detectedFacesCount = faces_data.length
+                    // Update emotions based on first face (or average)
+                    if (faces_data.length > 0) {
+                        var firstFace = faces_data[0]
+                        if (firstFace && firstFace.emotion_probs && firstFace.emotion_probs.length >= 7) {
+                            emotionDataThree.emotions["anger"] = firstFace.emotion_probs[0] * 100;
+                            emotionDataThree.emotions["disgust"] = firstFace.emotion_probs[1] * 100;
+                            emotionDataThree.emotions["fear"] = firstFace.emotion_probs[2] * 100;
+                            emotionDataThree.emotions["happiness"] = firstFace.emotion_probs[3] * 100;
+                            emotionDataThree.emotions["neutral"] = firstFace.emotion_probs[4] * 100;
+                            emotionDataThree.emotions["sadness"] = firstFace.emotion_probs[5] * 100;
+                            emotionDataThree.emotions["surprise"] = firstFace.emotion_probs[6] * 100;
+                        }
+                        // percentageEmotion باید بین 0 تا 1 باشد (نه در 100 ضرب شود)
+                        if (firstFace && typeof firstFace.emotion_prob !== 'undefined' && firstFace.emotion_prob !== null && !isNaN(firstFace.emotion_prob) && isFinite(firstFace.emotion_prob)) {
+                            // emotion_prob از backend بین 0 تا 1 است
+                            setPercentageEmotion(firstFace.emotion_prob);
+                        } else {
+                            // اگر emotion_prob وجود ندارد، از max emotion_probs استفاده کن
+                            if (firstFace && firstFace.emotion_probs && firstFace.emotion_probs.length > 0) {
+                                var maxProb = Math.max.apply(null, firstFace.emotion_probs);
+                                setPercentageEmotion(maxProb);
+                            } else {
+                                setPercentageEmotion(0);
+                            }
+                        }
+                        if (firstFace && firstFace.emotion) {
+                            emotionStatus = firstFace.emotion;
+                        }
+                        var time = seriesAnger.count;
+                        chartView.addDataPoint(emotionDataThree.emotions);
+                        if (firstFace && firstFace.emotion) {
+                            newEmotions[firstFace.emotion] += 1;
+                        }
+                        donutParent.updateDonutChart(newEmotions);
+                        emotionDataThree.emotionsQmlChanged();
+                    } else {
+                        detectedFacesCount = 0
+                        setPercentageEmotion(0);
+                    }
+                }
+                
                 function onEmotionRsult(emotion_status,emotion_prob,total_prob) {
                     emotionDataThree.emotions["anger"] = total_prob[0] * 100;
                     emotionDataThree.emotions["disgust"] = total_prob[1] * 100;
@@ -849,7 +903,7 @@ ApplicationWindow {
                     emotionDataThree.emotions["neutral"] = total_prob[4] * 100;
                     emotionDataThree.emotions["sadness"] = total_prob[5] * 100;
                     emotionDataThree.emotions["surprise"] = total_prob[6] * 100;
-                    percentageEmotion = emotion_prob;
+                    setPercentageEmotion(emotion_prob);
                     emotionStatus = emotion_status;
                     var time = seriesAnger.count;
                     chartView.addDataPoint(emotionDataThree.emotions);
@@ -1217,14 +1271,21 @@ ApplicationWindow {
                     }
                     onClicked: {
                         if(!startStopEmotion){
-                            startStopEmotion = !startStopEmotion
-                            backEnd.startWorker()
+                            // بررسی حالت ورودی
+                            if (audioInputSourceCombo.currentText === "Audio File") {
+                                // در حالت Audio File، فایل باید قبلاً انتخاب شده باشد
+                                // پردازش فایل به صورت خودکار شروع می‌شود
+                                console.log("Audio File mode - file should be selected first")
+                            } else {
+                                // حالت میکروفن
+                                startStopEmotion = !startStopEmotion
+                                backEnd.startWorker()
+                            }
                         }
                         else{
                             backEnd.stopWorker()
                             startStopEmotion = !startStopEmotion
                         }
-                        
                     }
                 }
                 
@@ -2211,8 +2272,18 @@ ApplicationWindow {
 
             id:page6Id
             property bool startStop : false
-            property double percentageEmotion: 0;
+            property double percentageEmotion: 0.0;
             property string emotionStatus: "Empty";
+            
+            // Helper function to ensure percentageEmotion is always valid
+            function setPercentageEmotion(value) {
+                if (typeof value === 'undefined' || isNaN(value) || !isFinite(value)) {
+                    percentageEmotion = 0.0;
+                } else {
+                    percentageEmotion = Math.max(0.0, Math.min(1.0, value));
+                }
+            }
+            
             anchors.fill: parent
             color: "#212121"
             Text {
@@ -2772,17 +2843,62 @@ ApplicationWindow {
             Connections {
                 target: fileHandler
                 function onEmotionRsult(emotion_status, emotion_prob, total_prob) {
-                    emotionDataSix.emotions["anger"] = total_prob[0] * 100;
-                    emotionDataSix.emotions["disgust"] = total_prob[1] * 100;
-                    emotionDataSix.emotions["fear"] = total_prob[2] * 100;
-                    emotionDataSix.emotions["happiness"] = total_prob[3] * 100;
-                    emotionDataSix.emotions["neutral"] = total_prob[4] * 100;
-                    emotionDataSix.emotions["sadness"] = total_prob[5] * 100;
-                    emotionDataSix.emotions["surprise"] = total_prob[6] * 100;
-                    percentageEmotion = emotion_prob;
-                    emotionStatus = emotion_status;
+                    console.log("[EEG] Emotion result received:", emotion_status, emotion_prob, total_prob)
+                    
+                    // تبدیل به لیست اگر numpy array است
+                    if (typeof total_prob !== 'undefined' && total_prob !== null && total_prob.length >= 7) {
+                        emotionDataSix.emotions["anger"] = total_prob[0] * 100;
+                        emotionDataSix.emotions["disgust"] = total_prob[1] * 100;
+                        emotionDataSix.emotions["fear"] = total_prob[2] * 100;
+                        emotionDataSix.emotions["happiness"] = total_prob[3] * 100;
+                        emotionDataSix.emotions["neutral"] = total_prob[4] * 100;
+                        emotionDataSix.emotions["sadness"] = total_prob[5] * 100;
+                        emotionDataSix.emotions["surprise"] = total_prob[6] * 100;
+                    }
+                    
+                    // تنظیم percentage
+                    if (typeof emotion_prob !== 'undefined' && emotion_prob !== null && !isNaN(emotion_prob)) {
+                        setPercentageEmotion(emotion_prob);
+                    } else {
+                        setPercentageEmotion(0);
+                    }
+                    
+                    // تنظیم emotion status
+                    if (typeof emotion_status !== 'undefined' && emotion_status !== null) {
+                        emotionStatus = emotion_status;
+                    }
+                    
+                    // به‌روزرسانی نمودارها
                     chartView.addDataPoint(emotionDataSix.emotions);
-                    newEmotions[emotion_status] += 1;
+                    
+                    // Mapping emotion names برای donut chart
+                    if (emotion_status) {
+                        var emotionKey = emotion_status.toLowerCase();
+                        var mappedKey = emotionKey;
+                        // تبدیل نام‌های مختلف به فرمت مورد نیاز
+                        if (emotionKey === "anger" || emotionKey === "angry") {
+                            mappedKey = "anger";
+                        } else if (emotionKey === "happiness" || emotionKey === "happy") {
+                            mappedKey = "happiness";
+                        } else if (emotionKey === "fear" || emotionKey === "fearful") {
+                            mappedKey = "fear";
+                        } else if (emotionKey === "sadness" || emotionKey === "sad") {
+                            mappedKey = "sadness";
+                        } else if (emotionKey === "disgust" || emotionKey === "disgusted") {
+                            mappedKey = "disgust";
+                        } else if (emotionKey === "surprise" || emotionKey === "surprised") {
+                            mappedKey = "surprise";
+                        } else if (emotionKey === "neutral") {
+                            mappedKey = "neutral";
+                        }
+                        
+                        if (newEmotions.hasOwnProperty(mappedKey)) {
+                            newEmotions[mappedKey] += 1;
+                        } else {
+                            newEmotions[mappedKey] = 1;
+                        }
+                    }
+                    
                     donutParent.updateDonutChart(newEmotions);
                     emotionDataSix.emotionsQmlChanged();
                 }

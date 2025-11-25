@@ -288,17 +288,28 @@ class BackEnd(QObject):
     @pyqtSlot(str, float, list)
     def saveToMemory(self, emotion_status, demotion_prob, total_prob):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # تبدیل numpy array به لیست برای JSON serialization
+        probs = total_prob
+        if isinstance(probs, np.ndarray):
+            probs = probs.tolist()
+        elif not isinstance(probs, list):
+            probs = list(probs)
+        
         self.data_buffer.append({
             "timestamp": timestamp,
             "emotion": emotion_status,
-            "prob": demotion_prob,
-            "probs": total_prob
+            "prob": float(demotion_prob),
+            "probs": probs
         })
 
     @pyqtSlot()
     def save_to_database(self):
-        self.db.save_batch(self.data_buffer)
-        self.data_buffer.clear()
+        if self.data_buffer:
+            try:
+                self.db.save_batch(self.data_buffer)
+                self.data_buffer.clear()
+            except Exception as e:
+                print(f"[-] Error saving to database: {e}")
 
     @pyqtSlot()
     def generatePdfReport(self):

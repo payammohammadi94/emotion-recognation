@@ -799,20 +799,25 @@ class FileHandler(QObject):
                     
                     # Convert emotion probabilities to the format expected by QML
                     total_prob = [
-                        emotion_probabilities.get('Anger', 0),
-                        emotion_probabilities.get('Disgust', 0),
-                        emotion_probabilities.get('Fear', 0),
-                        emotion_probabilities.get('Happiness', 0),
-                        emotion_probabilities.get('Neutral', 0),
-                        emotion_probabilities.get('Sadness', 0),
+                        float(emotion_probabilities.get('Anger', 0)),
+                        float(emotion_probabilities.get('Disgust', 0)),
+                        float(emotion_probabilities.get('Fear', 0)),
+                        float(emotion_probabilities.get('Happiness', 0)),
+                        float(emotion_probabilities.get('Neutral', 0)),
+                        float(emotion_probabilities.get('Sadness', 0)),
                         0.0  # surprise (not supported in current model)
                     ]
                     
                     # Get the probability of the top emotion
-                    emotion_prob = emotion_probabilities.get(top_emotion, 0)
+                    emotion_prob = float(emotion_probabilities.get(top_emotion, 0))
+                    
+                    print(f"[*] EEG Emotion detected: {top_emotion} ({emotion_prob:.2%})")
+                    print(f"[*] Total probabilities: {total_prob}")
                     
                     # Emit the emotion result
-                    self.emotionRsult.emit(top_emotion, emotion_prob, total_prob)
+                    print(f"[*] Emitting EEG emotion result signal...")
+                    self.emotionRsult.emit(str(top_emotion), float(emotion_prob), list(total_prob))
+                    print(f"[✓] Signal emitted successfully")
     
     @pyqtSlot(str, float, list)
     def saveToMemory(self, emotion_status, demotion_prob, total_prob):
